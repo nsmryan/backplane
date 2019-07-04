@@ -4,69 +4,18 @@ extern crate serde;
 extern crate num;
 #[macro_use] extern crate num_derive;
 
+pub mod stream_read;
+pub mod stream_write;
+
 use std::fs::File;
-use std::io::{Read, BufReader};
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream, UdpSocket, SocketAddrV4};
-use std::time::Duration;
-use std::borrow::BorrowMut;
 
 use bytes::BytesMut;
-use bytes::BufMut;
 
-
-trait StreamRead {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String>;
-}
-
-impl StreamRead for TcpStream {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        read_bytes_from_reader(self, bytes, num_bytes)
-    }
-}
-
-impl StreamRead for BufReader<File> {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        read_bytes_from_reader(self, bytes, num_bytes)
-    }
-}
-
-impl StreamRead for UdpSocket {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        // for UDP we just read a message, which must contain a CCSDS packet
-        bytes.clear();
-        self.recv(bytes).map_err(|err| format!("Udp Socket Read Error: {}", err))
-    }
-}
-
-
-trait StreamWrite {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String>;
-}
-
-impl StreamWrite for File {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String> {
-        self.write_all(&bytes)
-            .map_err(|err| format!("IO error {}", err))
-            .map(|_| bytes.len())
-    }
-}
-
-// TODO make this a Udp stream type instead of a tuple
-impl StreamWrite for (UdpSocket, SocketAddrV4) {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String> {
-        self.0.send_to(&bytes, &self.1)
-                .map_err(|err| format!("IO error {}", err))
-    }
-}
-
-impl StreamWrite for TcpStream {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String> {
-        self.write_all(&bytes)
-            .map_err(|err| format!("IO error {}", err))
-            .map(|_| bytes.len())
-    }
-}
+use crate::stream_write::*;
+use crate::stream_read::*;
 
 
 /// The stream option is the input/output stream type
@@ -111,7 +60,7 @@ impl StreamOption {
             },
 
             StreamOption::Udp => {
-                let sock = UdpSocket::bind("0.0.0.0:0").map_err(|err| "couldn't bind to udp address/port")?;
+                let sock = UdpSocket::bind("0.0.0.0:0").map_err(|_err| "couldn't bind to udp address/port")?;
                 result = Ok(ReadStream::Udp(sock));
             },
         }
@@ -232,7 +181,7 @@ impl Default for UdpSettings {
 
 impl UdpSettings {
     pub fn open_read_stream(&self) -> Result<impl StreamRead, String> {
-        let sock = UdpSocket::bind("0.0.0.0:0").map_err(|err| "Couldn't bind to udp address/port")?;
+        let sock = UdpSocket::bind("0.0.0.0:0").map_err(|_err| "Couldn't bind to udp address/port")?;
         return Ok(sock);
     }
 }
@@ -326,18 +275,5 @@ impl WriteStream {
             },
         }
     }
-}
-
-
-fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-    let current_len = bytes.len();
-
-    bytes.reserve(num_bytes);
-
-    let mut_bytes: &mut [u8] = bytes.borrow_mut();
-    reader.read_exact(&mut mut_bytes[current_len..(current_len + num_bytes)])
-          .map_err(|err| format!("Stream Read Error: {}", err))?;
-
-    Ok(num_bytes)
 }
 
