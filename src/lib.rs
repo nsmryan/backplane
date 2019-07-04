@@ -21,13 +21,13 @@ trait StreamRead {
 
 impl StreamRead for TcpStream {
     fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        read_bytes(self, bytes, num_bytes)
+        read_bytes_from_reader(self, bytes, num_bytes)
     }
 }
 
 impl StreamRead for BufReader<File> {
     fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        read_bytes(self, bytes, num_bytes)
+        read_bytes_from_reader(self, bytes, num_bytes)
     }
 }
 
@@ -52,6 +52,7 @@ impl StreamWrite for File {
     }
 }
 
+// TODO make this a Udp stream type instead of a tuple
 impl StreamWrite for (UdpSocket, SocketAddrV4) {
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String> {
         self.0.send_to(&bytes, &self.1)
@@ -81,6 +82,7 @@ pub enum StreamOption {
     Udp       = 4,
 }
 
+// TODO replace individual open code with a function to open from each type of settings
 impl StreamOption {
     pub fn open_input(&self, input_settings: &StreamSettings) -> Result<ReadStream, String> {
         let result;
@@ -228,6 +230,13 @@ impl Default for UdpSettings {
     }
 }
 
+impl UdpSettings {
+    pub fn open_read_stream(&self) -> Result<impl StreamRead, String> {
+        let sock = UdpSocket::bind("0.0.0.0:0").map_err(|err| "Couldn't bind to udp address/port")?;
+        return Ok(sock);
+    }
+}
+
 /// The stream settings are all the settings for all stream types
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StreamSettings {
@@ -245,7 +254,7 @@ pub struct StreamSettings {
 }
 
 /* Input/Output Streams */
-/// A read stream is a source of CCSDS packets
+/// A read stream is a source of bytes
 #[derive(Debug)]
 pub enum ReadStream {
     File(BufReader<File>),
@@ -263,17 +272,17 @@ impl ReadStream {
 
         match self {
             ReadStream::File(ref mut file) => {
-                result = read_bytes(file, bytes, num_bytes);
+                result = read_bytes_from_reader(file, bytes, num_bytes);
             },
 
             ReadStream::Udp(udp_sock) => {
-                // for UDP we just read a message, which must contain a CCSDS packet
+                // for UDP we just read a message
                 bytes.clear();
                 result = udp_sock.recv(bytes).map_err(|err| format!("Udp Socket Read Error: {}", err));
             },
 
             ReadStream::Tcp(tcp_stream) => {
-                result = read_bytes(tcp_stream, bytes, num_bytes);
+                result = read_bytes_from_reader(tcp_stream, bytes, num_bytes);
             },
 
             ReadStream::Null => {
@@ -286,7 +295,7 @@ impl ReadStream {
 }
 
 
-/// A read stream a sink of CCSDS packets
+/// A read stream a sink of bytes
 #[derive(Debug)]
 pub enum WriteStream {
     File(File),
@@ -320,7 +329,7 @@ impl WriteStream {
 }
 
 
-fn read_bytes<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
+fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
     let current_len = bytes.len();
 
     bytes.reserve(num_bytes);
@@ -331,3 +340,4 @@ fn read_bytes<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -
 
     Ok(num_bytes)
 }
+
