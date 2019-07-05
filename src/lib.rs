@@ -7,10 +7,12 @@ extern crate num;
 pub mod stream_read;
 pub mod stream_write;
 
+use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
-use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream, UdpSocket, SocketAddrV4};
+use std::error::Error;
+use std::str::FromStr;
 
 use bytes::BytesMut;
 
@@ -112,6 +114,24 @@ impl Default for FileSettings {
     }
 }
 
+impl fmt::Display for FileSettings {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "file:{}", self.file_name)
+    }
+}
+
+impl FromStr for FileSettings {
+    type Err = StreamSettingsParseError;
+    fn from_str(s: &str) -> Result<FileSettings, StreamSettingsParseError> {
+        let prefix = "file:";
+        if s.starts_with(prefix) {
+            Ok(FileSettings { file_name: s[prefix.len()..].to_string() })
+        } else {
+            Err(StreamSettingsParseError(()))
+        }
+    }
+}
+
 impl FileSettings {
     pub fn open_read_stream(&self) -> Result<ReadStream, String> {
         let result = File::open(self.file_name.clone())
@@ -142,6 +162,28 @@ impl Default for TcpClientSettings {
     fn default() -> Self {
         TcpClientSettings { port: 8000,
                             ip: "127.0.0.1".to_string()
+        }
+    }
+}
+
+impl fmt::Display for TcpClientSettings {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "tcp_client:{}:{}", self.ip, self.port)
+    }
+}
+
+impl FromStr for TcpClientSettings {
+    type Err = StreamSettingsParseError;
+    fn from_str(s: &str) -> Result<TcpClientSettings, StreamSettingsParseError> {
+        let prefix = "tcp_client:";
+        if s.starts_with(prefix) {
+            let mut parts = s[prefix.len()..].split(':');
+            let addr = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port_str = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port = port_str.parse::<u16>().map_err(|_| StreamSettingsParseError(()))?;
+            Ok(TcpClientSettings { ip: addr.to_string(), port: port })
+        } else {
+            Err(StreamSettingsParseError(()))
         }
     }
 }
@@ -185,6 +227,28 @@ impl Default for TcpServerSettings {
     }
 }
 
+impl fmt::Display for TcpServerSettings {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "tcp_server:{}:{}", self.ip, self.port)
+    }
+}
+
+impl FromStr for TcpServerSettings {
+    type Err = StreamSettingsParseError;
+    fn from_str(s: &str) -> Result<TcpServerSettings, StreamSettingsParseError> {
+        let prefix = "tcp_client:";
+        if s.starts_with(prefix) {
+            let mut parts = s[prefix.len()..].split(':');
+            let addr = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port_str = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port = port_str.parse::<u16>().map_err(|_| StreamSettingsParseError(()))?;
+            Ok(TcpServerSettings { ip: addr.to_string(), port: port })
+        } else {
+            Err(StreamSettingsParseError(()))
+        }
+    }
+}
+
 impl TcpServerSettings {
     pub fn open_read_stream(&self) -> Result<ReadStream, String> {
         let addr = SocketAddrV4::new(self.ip.parse().unwrap(), self.port);
@@ -220,6 +284,29 @@ impl Default for UdpSettings {
         }
     }
 }
+
+impl fmt::Display for UdpSettings {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "udp:{}:{}", self.ip, self.port)
+    }
+}
+
+impl FromStr for UdpSettings {
+    type Err = StreamSettingsParseError;
+    fn from_str(s: &str) -> Result<UdpSettings, StreamSettingsParseError> {
+        let prefix = "tcp_client:";
+        if s.starts_with(prefix) {
+            let mut parts = s[prefix.len()..].split(':');
+            let addr = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port_str = parts.next().ok_or(StreamSettingsParseError(()))?;
+            let port = port_str.parse::<u16>().map_err(|_| StreamSettingsParseError(()))?;
+            Ok(UdpSettings { ip: addr.to_string(), port: port })
+        } else {
+            Err(StreamSettingsParseError(()))
+        }
+    }
+}
+
 
 impl UdpSettings {
     pub fn open_read_stream(&self) -> Result<ReadStream, String> {
@@ -346,3 +433,17 @@ impl Default for WriteStream {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StreamSettingsParseError(());
+
+impl fmt::Display for StreamSettingsParseError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(self.description())
+    }
+}
+
+impl Error for StreamSettingsParseError {
+    fn description(&self) -> &str {
+        "error parsing stream settings"
+    }
+}

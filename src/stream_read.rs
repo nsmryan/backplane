@@ -30,7 +30,7 @@ impl StreamRead for UdpSocket {
     }
 }
 
-pub fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
+fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
     let current_len = bytes.len();
 
     bytes.reserve(num_bytes);
