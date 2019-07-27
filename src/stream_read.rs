@@ -11,6 +11,8 @@ use bytes::BytesMut;
 // a timeout, or infinite (block until data is available). This would cover the
 // case of files which are being written as well as read.
 // TODO this error return of String should be replaced with a error handling strategy
+// TODO this should include serial reading
+// TODO this might include stdin reading
 pub trait StreamRead {
     fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String>;
 }

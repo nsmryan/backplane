@@ -3,6 +3,8 @@ use std::io::prelude::*;
 use std::net::{TcpStream, UdpSocket, SocketAddrV4};
 
 
+// TODO this should include serial writing
+// TODO this might include stdin writing
 pub trait StreamWrite {
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize, String>;
 }
