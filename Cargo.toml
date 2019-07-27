@@ -1,6 +1,6 @@
 [package]
 name = "backplane"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["nsmryan <nsmryan@gmail.com>"]
 edition = "2018"
 description = "Backplane provides tools for moving data between common interfaces"

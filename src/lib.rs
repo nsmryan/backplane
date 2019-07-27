@@ -100,6 +100,12 @@ pub enum StreamOption {
     Udp = 4,
 }
 
+impl Default for StreamOption {
+    fn default() -> StreamOption {
+        return StreamOption::File;
+    }
+}
+
 /* Input Streams */
 /// The file settings are everything needed to open and read from a file as an input or output
 /// stream
