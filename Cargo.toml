@@ -3,6 +3,11 @@ name = "backplane"
 version = "0.0.1"
 authors = ["nsmryan <nsmryan@gmail.com>"]
 edition = "2018"
+description = "Backplane provides tools for moving data between common interfaces"
+repository = "https://github.com/nsmryan/backplane"
+keywords=["networking", "tools", "cli"]
+homepage =  "https://github.com/nsmryan/backplane"
+license = "MIT"
 
 [lib]
 name = "backplane"
