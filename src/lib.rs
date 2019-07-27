@@ -419,6 +419,8 @@ impl WriteStream {
             },
 
             WriteStream::Null => {
+                // TODO should this be a sink like /dev/null, and 'write' all bytes, or
+                // should it write 0 bytes?
                 result = Ok(0);
             },
         }
@@ -447,3 +449,4 @@ impl Error for StreamSettingsParseError {
         "error parsing stream settings"
     }
 }
+

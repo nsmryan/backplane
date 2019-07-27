@@ -1,8 +1,16 @@
 [package]
 name = "backplane"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["nsmryan <nsmryan@gmail.com>"]
 edition = "2018"
+
+[lib]
+name = "backplane"
+path = "src/lib.rs"
+
+[[bin]]
+name = "backplane"
+path = "src/main.rs"
 
 [dependencies]
 bytes = "0.4"
