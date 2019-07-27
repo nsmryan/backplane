@@ -13,31 +13,54 @@ use bytes::BytesMut;
 // TODO this error return of String should be replaced with a error handling strategy
 // TODO this should include serial reading
 // TODO this might include stdin reading
+
+pub enum StreamReadResult {
+    BytesRead(usize),
+    Finished,
+    Error(String),
+}
+
 pub trait StreamRead {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String>;
+    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> StreamReadResult;
 }
 
 impl StreamRead for TcpStream {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
+    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> StreamReadResult {
         read_bytes_from_reader(self, bytes, num_bytes)
     }
 }
 
 impl StreamRead for BufReader<File> {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
-        read_bytes_from_reader(self, bytes, num_bytes)
+    fn read_bytes(&mut self, bytes: &mut BytesMut, num_bytes: usize) -> StreamReadResult {
+        let result = read_bytes_from_reader(self, bytes, num_bytes);
+
+        if let StreamReadResult::BytesRead(0) = result {
+            // NOTE assumes that the end of the file is the end of the stream, and no new data is
+            // possible!
+            return StreamReadResult::Finished;
+        } else {
+            return result;
+        }
     }
 }
 
 impl StreamRead for UdpSocket {
-    fn read_bytes(&mut self, bytes: &mut BytesMut, _num_bytes: usize) -> Result<usize, String> {
+    fn read_bytes(&mut self, bytes: &mut BytesMut, _num_bytes: usize) -> StreamReadResult {
         // for UDP we just read a message
         bytes.clear();
-        self.recv(bytes).map_err(|err| format!("Udp Socket Read Error: {}", err))
+        match self.recv(bytes).map_err(|err| format!("Udp Socket Read Error: {}", err)) {
+            Ok(bytes_read) => {
+                return StreamReadResult::BytesRead(bytes_read);
+            },
+
+            Err(string) => {
+                return StreamReadResult::Error(string);
+            }
+        }
     }
 }
 
-fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> Result<usize, String> {
+fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> StreamReadResult {
     let old_len = bytes.len();
     let new_len = old_len + num_bytes;
 
@@ -55,11 +78,16 @@ fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_byt
     let result = reader.read(&mut mut_bytes[old_len..(old_len + num_bytes)])
                        .map_err(|err| format!("Stream Read Error: {}", err));
 
-    // if byte were read, set the BytesMut length to reflect the new data available
-    if let Ok(bytes_read) = result {
-        bytes.truncate(old_len + bytes_read);
-    }
+    match result {
+        Ok(bytes_read) => {
+            // if byte were read, set the BytesMut length to reflect the new data available
+            bytes.truncate(old_len + bytes_read);
+            return StreamReadResult::BytesRead(bytes_read);
+        },
 
-    return result;
+        Err(string) => {
+            return StreamReadResult::Error(string);
+        }
+    }
 }
 

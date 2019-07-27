@@ -364,9 +364,9 @@ impl Default for ReadStream {
 impl ReadStream {
     pub fn stream_read(&mut self,
                        bytes: &mut BytesMut,
-                       num_bytes: usize) -> Result<usize, String> {
+                       num_bytes: usize) -> StreamReadResult {
 
-        let result: Result<usize, String>;
+        let result: StreamReadResult;
 
         match self {
             ReadStream::File(ref mut file) => {
@@ -384,11 +384,11 @@ impl ReadStream {
 
             ReadStream::Null => {
                 // TODO is this an error, or should it just always return no bytes?
-                result = Err("Reading a Null Stream! This should not happen!".to_string());
+                result = StreamReadResult::Error("Reading a Null Stream! This should not happen!".to_string());
             },
         }
 
-        result
+        return result;
     }
 }
 
