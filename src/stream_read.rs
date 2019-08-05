@@ -60,6 +60,7 @@ impl StreamRead for UdpSocket {
     }
 }
 
+
 fn read_bytes_from_reader<R: Read>(reader: &mut R, bytes: &mut BytesMut, num_bytes: usize) -> StreamReadResult {
     let old_len = bytes.len();
     let new_len = old_len + num_bytes;

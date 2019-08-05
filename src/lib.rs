@@ -361,6 +361,27 @@ impl Default for ReadStream {
     }
 }
 
+impl FromStr for ReadStream {
+    type Err = String;
+    fn from_str(read_stream_desc: &str) -> Result<ReadStream, String> {
+        let result;
+
+        if let Ok(file_settings) = FileSettings::from_str(read_stream_desc) {
+            result = file_settings.open_read_stream();
+        } else if let Ok(udp_settings) = UdpSettings::from_str(read_stream_desc) {
+            result = udp_settings.open_read_stream();
+        } else if let Ok(tcp_server_settings) = TcpServerSettings::from_str(read_stream_desc) {
+            result = tcp_server_settings.open_read_stream();
+        } else if let Ok(tcp_client_settings) = TcpClientSettings::from_str(read_stream_desc) {
+            result = tcp_client_settings.open_read_stream();
+        } else {
+            result = Err("No matching stream settings!".to_string());
+        }
+
+        return result;
+    }
+}
+
 impl ReadStream {
     pub fn stream_read(&mut self,
                        bytes: &mut BytesMut,
@@ -405,6 +426,27 @@ pub enum WriteStream {
     Udp((UdpSocket, SocketAddrV4)),
     Tcp(TcpStream),
     Null,
+}
+
+impl FromStr for WriteStream {
+    type Err = String;
+    fn from_str(write_stream_desc: &str) -> Result<WriteStream, String> {
+        let result;
+
+        if let Ok(file_settings) = FileSettings::from_str(write_stream_desc) {
+            result = file_settings.open_write_stream();
+        } else if let Ok(udp_settings) = UdpSettings::from_str(write_stream_desc) {
+            result = udp_settings.open_write_stream();
+        } else if let Ok(tcp_server_settings) = TcpServerSettings::from_str(write_stream_desc) {
+            result = tcp_server_settings.open_write_stream();
+        } else if let Ok(tcp_client_settings) = TcpClientSettings::from_str(write_stream_desc) {
+            result = tcp_client_settings.open_write_stream();
+        } else {
+            result = Err("No matching stream settings!".to_string());
+        }
+
+        return result;
+    }
 }
 
 impl WriteStream {
