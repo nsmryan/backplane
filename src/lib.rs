@@ -450,7 +450,7 @@ impl FromStr for WriteStream {
 }
 
 impl WriteStream {
-    pub fn stream_send(&mut self, packet: &Vec<u8>) -> Result<usize, String> {
+    pub fn stream_write(&mut self, packet: &Vec<u8>) -> Result<usize, String> {
         let result;
 
         match self {
