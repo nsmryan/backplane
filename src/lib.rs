@@ -450,20 +450,21 @@ impl FromStr for WriteStream {
 }
 
 impl WriteStream {
-    pub fn stream_write(&mut self, packet: &Vec<u8>) -> Result<usize, String> {
+    pub fn stream_write(&mut self, bytes: &BytesMut) -> Result<usize, String> {
+                       
         let result;
 
         match self {
             WriteStream::File(file) => {
-                result = file.write_bytes(&packet);
+                result = file.write_bytes(bytes);
             },
 
             WriteStream::Udp(udp_stream) => {
-                result = udp_stream.write_bytes(&packet);
+                result = udp_stream.write_bytes(bytes);
             },
 
             WriteStream::Tcp(tcp_stream) => {
-                result = tcp_stream.write_bytes(&packet);
+                result = tcp_stream.write_bytes(bytes);
             },
 
             WriteStream::Null => {
